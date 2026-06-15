@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { saveImage } from "@/libs/db";
+import { getOwnerName } from "@/libs/identity";
 import { generateImageFromPrompt } from "@/libs/pollinations";
 import { GenerateImageRequest, GenerateImageResponse } from "@/libs/types";
 
 export async function POST(request: NextRequest) {
   try {
     console.log("📨 POST /api/generate received");
+
+    const ownerName = getOwnerName(request);
+    if (!ownerName) {
+      return NextResponse.json(
+        { error: "User name is required" },
+        { status: 401 },
+      );
+    }
 
     const body = await request.json();
     console.log("📦 Body:", body);
@@ -38,6 +47,7 @@ export async function POST(request: NextRequest) {
     // Save to database
     console.log("💾 Saving to database...");
     const savedImage = saveImage({
+      ownerName,
       prompt,
       style,
       filename: result.filename,
@@ -46,7 +56,11 @@ export async function POST(request: NextRequest) {
 
     // Return response with imageUrl
     const response: GenerateImageResponse = {
-      ...savedImage,
+      id: savedImage.id,
+      prompt: savedImage.prompt,
+      style: savedImage.style || "",
+      filename: savedImage.filename,
+      createdAt: savedImage.createdAt,
       imageUrl: `/api/images/${result.filename}`,
     };
 

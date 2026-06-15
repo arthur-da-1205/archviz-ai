@@ -11,6 +11,7 @@ db.pragma("journal_mode = WAL");
 db.exec(`
   CREATE TABLE IF NOT EXISTS images (
     id TEXT PRIMARY KEY,
+    ownerName TEXT NOT NULL DEFAULT 'legacy',
     prompt TEXT NOT NULL,
     style TEXT,
     filename TEXT NOT NULL,
@@ -18,9 +19,18 @@ db.exec(`
   )
 `);
 
+const imageColumns = db
+  .prepare("PRAGMA table_info(images)")
+  .all() as Array<{ name: string }>;
+
+if (!imageColumns.some((column) => column.name === "ownerName")) {
+  db.exec("ALTER TABLE images ADD COLUMN ownerName TEXT NOT NULL DEFAULT 'legacy'");
+}
+
 // Types
 export interface ImageRecord {
   id: string;
+  ownerName: string;
   prompt: string;
   style: string | null;
   filename: string;
@@ -29,6 +39,7 @@ export interface ImageRecord {
 
 // Save image to database
 export function saveImage(data: {
+  ownerName: string;
   prompt: string;
   style: string;
   filename: string;
@@ -37,31 +48,43 @@ export function saveImage(data: {
   const createdAt = new Date().toISOString();
 
   const stmt = db.prepare(
-    `INSERT INTO images (id, prompt, style, filename, createdAt)
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO images (id, ownerName, prompt, style, filename, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?)`,
   );
 
-  stmt.run(id, data.prompt, data.style, data.filename, createdAt);
+  stmt.run(
+    id,
+    data.ownerName,
+    data.prompt,
+    data.style,
+    data.filename,
+    createdAt,
+  );
 
   return { id, ...data, createdAt };
 }
 
-// Get all images
-export function getImages(): ImageRecord[] {
-  const stmt = db.prepare("SELECT * FROM images ORDER BY createdAt DESC");
-  return stmt.all() as ImageRecord[];
+// Get all images for one user
+export function getImages(ownerName: string): ImageRecord[] {
+  const stmt = db.prepare(
+    "SELECT * FROM images WHERE ownerName = ? ORDER BY createdAt DESC",
+  );
+  return stmt.all(ownerName) as ImageRecord[];
 }
 
 // Get image by ID
-export function getImageById(id: string): ImageRecord | null {
-  const stmt = db.prepare("SELECT * FROM images WHERE id = ?");
-  return (stmt.get(id) as ImageRecord) || null;
+export function getImageById(
+  id: string,
+  ownerName: string,
+): ImageRecord | null {
+  const stmt = db.prepare("SELECT * FROM images WHERE id = ? AND ownerName = ?");
+  return (stmt.get(id, ownerName) as ImageRecord) || null;
 }
 
 // Delete image
-export function deleteImage(id: string): boolean {
-  const stmt = db.prepare("DELETE FROM images WHERE id = ?");
-  const result = stmt.run(id);
+export function deleteImage(id: string, ownerName: string): boolean {
+  const stmt = db.prepare("DELETE FROM images WHERE id = ? AND ownerName = ?");
+  const result = stmt.run(id, ownerName);
   return result.changes > 0;
 }
 

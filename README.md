@@ -29,19 +29,21 @@ You need a Pollinations API key for image generation. Create one at https://ente
 | `DATABASE_URL`         | No       | `file:./gallery.db` | SQLite database path                         |
 | `POLLINATIONS_API_KEY` | Yes      | -                   | Pollinations API key used by `/api/generate` |
 | `POLLINATIONS_MODEL`   | No       | `flux`              | Pollinations image generation model          |
+| `AI_IMAGE_TIMEOUT_MS`  | No       | `90000`             | Timeout for upstream image generation        |
 
 ## How It Works
 
-1. **Generate**: Type a prompt, pick a style, and click "Generate Design". The backend calls Pollinations, stores the generated image on disk, and saves metadata to SQLite.
-2. **Gallery**: All generated images persist in the gallery. Refresh the page - they're still there.
-3. **Re-generate**: Hover over any image, click "Edit & Regenerate", tweak the prompt or style, and generate a new version.
-4. **Delete**: Hover over an image and click "Delete" (click twice to confirm).
+1. **Identify**: Enter a name before opening Playground or Gallery. This lightweight identity separates each user's saved images.
+2. **Generate**: Type a prompt, pick a style, and click "Generate Design". The backend calls Pollinations, stores the generated image on disk, and saves metadata to SQLite under that name.
+3. **Gallery**: Generated images persist in that user's gallery. Refresh the page - they're still there.
+4. **Re-generate**: Hover over any image, click "Edit & Regenerate", tweak the prompt or style, and generate a new version.
+5. **Delete**: Hover over an image and click "Delete" (click twice to confirm).
 
 ## Architecture
 
 - **Frontend**: React 19 + Tailwind CSS, renders the prompt form and image gallery
 - **Backend**: Next.js API Routes - handles Pollinations calls, image storage, and database operations
-- **Database**: SQLite (better-sqlite3) with WAL mode for concurrent access
+- **Database**: SQLite (better-sqlite3) with WAL mode for concurrent access and per-name gallery ownership
 - **Image Storage**: Downloaded from Pollinations responses and saved to `storage/` directory, served via `/api/images/[filename]`
 - **AI API**: Pollinations, defaults to the `flux` model
 

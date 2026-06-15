@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 
 const STORAGE_DIR = path.join(process.cwd(), "storage");
+const DEFAULT_TIMEOUT_MS = 90000;
 
 if (!fs.existsSync(STORAGE_DIR)) {
   fs.mkdirSync(STORAGE_DIR, { recursive: true });
@@ -44,12 +45,27 @@ export async function generateImageFromPrompt(
 
   console.log("🎨 Creating Pollinations image...");
 
-  const response = await fetch(url, {
-    headers: {
-      Accept: "image/*",
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-    },
-  });
+  const timeoutMs = Number(process.env.AI_IMAGE_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        Accept: "image/*",
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`Pollinations timeout after ${timeoutMs / 1000}s`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     throw new Error(

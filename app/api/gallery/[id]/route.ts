@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteImage, getImageById } from "@/libs/db";
+import { getOwnerName } from "@/libs/identity";
 import { deleteImageFile } from "@/libs/pollinations";
 
 export async function DELETE(
@@ -8,8 +9,15 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const ownerName = getOwnerName(_request);
+    if (!ownerName) {
+      return NextResponse.json(
+        { error: "User name is required" },
+        { status: 401 },
+      );
+    }
 
-    const image = getImageById(id);
+    const image = getImageById(id, ownerName);
     if (!image) {
       return NextResponse.json({ error: "Image not found" }, { status: 404 });
     }
@@ -18,7 +26,7 @@ export async function DELETE(
     deleteImageFile(image.filename);
 
     // Delete record from database
-    deleteImage(id);
+    deleteImage(id, ownerName);
 
     return NextResponse.json({ success: true });
   } catch (error) {

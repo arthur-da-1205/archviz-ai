@@ -1,7 +1,7 @@
 "use client";
 
 import { GenerateImageResponse } from "@/libs/types";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import PromptForm from "./components/forms/prompt";
 import Gallery from "./components/gallery";
 import LoadingIndicator from "./components/loading-indicator";
@@ -11,24 +11,42 @@ type ActiveView = "home" | "playground" | "gallery";
 
 export default function Home() {
   const [activeView, setActiveView] = useState<ActiveView>("home");
+  const [userName, setUserName] = useState("");
+  const [identityInput, setIdentityInput] = useState("");
+  const [pendingView, setPendingView] = useState<ActiveView | null>(null);
   const [images, setImages] = useState<GenerateImageResponse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isGalleryLoading, setIsGalleryLoading] = useState(true);
+  const [isGalleryLoading, setIsGalleryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
   const [editingStyle, setEditingStyle] = useState<string | null>(null);
-  const hasFetched = useRef(false);
 
   useEffect(() => {
-    if (hasFetched.current) return;
-    hasFetched.current = true;
+    const storedName = localStorage.getItem("archviz_user_name") || "";
+    if (storedName) {
+      setUserName(storedName);
+      setIdentityInput(storedName);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!userName) {
+      setImages([]);
+      setIsGalleryLoading(false);
+      return;
+    }
 
     const loadGallery = async () => {
+      setIsGalleryLoading(true);
       try {
-        const response = await fetch("/api/gallery");
+        const response = await fetch("/api/gallery", {
+          headers: { "x-archviz-user": userName },
+        });
         if (response.ok) {
           const data = await response.json();
           setImages(data);
+        } else {
+          setImages([]);
         }
       } catch (err) {
         console.error("Failed to load gallery:", err);
@@ -38,16 +56,60 @@ export default function Home() {
     };
 
     loadGallery();
-  }, []);
+  }, [userName]);
+
+  const requestView = (view: ActiveView) => {
+    if (view === "home") {
+      setPendingView(null);
+      setActiveView("home");
+      return;
+    }
+
+    if (view !== "home" && !userName) {
+      setPendingView(view);
+      return;
+    }
+
+    setActiveView(view);
+  };
+
+  const handleIdentitySubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const cleanName = identityInput.trim().replace(/\s+/g, " ");
+    if (!cleanName) return;
+
+    localStorage.setItem("archviz_user_name", cleanName);
+    setUserName(cleanName);
+    setActiveView(pendingView || "playground");
+    setPendingView(null);
+  };
+
+  const handleSwitchUser = () => {
+    localStorage.removeItem("archviz_user_name");
+    setUserName("");
+    setIdentityInput("");
+    setImages([]);
+    setEditingPrompt(null);
+    setEditingStyle(null);
+    setActiveView("home");
+  };
 
   const handleGenerate = async (prompt: string, style: string) => {
+    if (!userName) {
+      setPendingView("playground");
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-archviz-user": userName,
+        },
         body: JSON.stringify({ prompt, style }),
       });
 
@@ -95,6 +157,7 @@ export default function Home() {
     try {
       const response = await fetch(`/api/gallery/${id}`, {
         method: "DELETE",
+        headers: { "x-archviz-user": userName },
       });
 
       if (!response.ok) {
@@ -121,7 +184,7 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <button
             type="button"
-            onClick={() => setActiveView("home")}
+            onClick={() => requestView("home")}
             className="text-left"
           >
             <span className="block text-lg font-semibold tracking-wide text-[#17202a]">
@@ -132,22 +195,37 @@ export default function Home() {
             </span>
           </button>
 
-          <nav className="flex w-full items-center gap-1 rounded-full border border-black/10 bg-[#f8f5ef] p-1 sm:w-auto">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setActiveView(item.id)}
-                className={`flex-1 rounded-full px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:px-4 ${
-                  activeView === item.id
-                    ? "bg-[#1f2933] text-white"
-                    : "text-[#46515f] hover:bg-white"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <nav className="flex w-full items-center gap-1 rounded-full border border-black/10 bg-[#f8f5ef] p-1 sm:w-auto">
+              {navItems.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => requestView(item.id)}
+                  className={`flex-1 rounded-full px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:px-4 ${
+                    activeView === item.id
+                      ? "bg-[#1f2933] text-white"
+                      : "text-[#46515f] hover:bg-white"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+
+            {userName && (
+              <div className="flex items-center justify-between gap-3 rounded-full border border-black/10 bg-white px-3 py-2 text-sm text-[#46515f] sm:justify-start">
+                <span className="max-w-[160px] truncate">{userName}</span>
+                <button
+                  type="button"
+                  onClick={handleSwitchUser}
+                  className="font-medium text-[#17202a] hover:underline"
+                >
+                  Switch
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -178,7 +256,7 @@ export default function Home() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => setActiveView("playground")}
+                  onClick={() => requestView("playground")}
                   className="mt-8 rounded-md bg-[#d7b56d] px-6 py-3 text-sm font-semibold text-[#111827] shadow-lg transition-colors hover:bg-[#e6c77f]"
                 >
                   Let&apos;s Try
@@ -228,7 +306,7 @@ export default function Home() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setActiveView("gallery")}
+                    onClick={() => requestView("gallery")}
                     className="rounded-md border border-black/10 px-4 py-2 text-sm font-medium text-[#17202a] hover:bg-[#f6f3ee]"
                   >
                     View Gallery
@@ -275,6 +353,63 @@ export default function Home() {
           </section>
         )}
       </main>
+
+      {pendingView && !userName && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-2xl">
+            <div className="mb-5">
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#6b7b68]">
+                Identify Workspace
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold text-[#17202a]">
+                Enter your name
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-[#5f6b76]">
+                This lightweight login keeps each reviewer&apos;s generated
+                images separate without adding a full authentication system.
+              </p>
+            </div>
+
+            <form onSubmit={handleIdentitySubmit} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="identityName"
+                  className="mb-2 block text-sm font-medium text-gray-700"
+                >
+                  Name
+                </label>
+                <input
+                  id="identityName"
+                  type="text"
+                  value={identityInput}
+                  onChange={(event) => setIdentityInput(event.target.value)}
+                  maxLength={80}
+                  autoFocus
+                  placeholder="e.g., Arthur"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#d7b56d]"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPendingView(null)}
+                  className="flex-1 rounded-md border border-black/10 px-4 py-3 text-sm font-medium text-[#17202a] hover:bg-[#f6f3ee]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!identityInput.trim()}
+                  className="flex-1 rounded-md bg-[#1f2933] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#111827] disabled:cursor-not-allowed disabled:bg-gray-300"
+                >
+                  Continue
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {isLoading && <LoadingIndicator />}
 
