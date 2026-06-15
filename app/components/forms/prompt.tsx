@@ -10,11 +10,11 @@ interface PromptFormProps {
 }
 
 const STYLES = [
-  { value: "modern", label: "✨ Modern" },
-  { value: "minimalist", label: "◾ Minimalist" },
-  { value: "industrial", label: "⚙️ Industrial" },
-  { value: "traditional", label: "🏛️ Traditional" },
-  { value: "contemporary", label: "🎨 Contemporary" },
+  { value: "modern", label: "Modern" },
+  { value: "minimalist", label: "Minimalist" },
+  { value: "industrial", label: "Industrial" },
+  { value: "traditional", label: "Traditional" },
+  { value: "contemporary", label: "Contemporary" },
 ];
 
 export default function PromptForm({
@@ -60,7 +60,7 @@ export default function PromptForm({
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="e.g., A modern kitchen with white marble countertops, brass fixtures, and natural light"
-          className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+          className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#d7b56d] resize-none"
           rows={3}
           disabled={isLoading}
           maxLength={500}
@@ -83,7 +83,7 @@ export default function PromptForm({
               disabled={isLoading}
               className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
                 style === s.value
-                  ? "bg-blue-500 text-white shadow-md"
+                  ? "bg-[#1f2933] text-white shadow-md"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
@@ -96,7 +96,7 @@ export default function PromptForm({
       <button
         type="submit"
         disabled={!prompt.trim() || isLoading}
-        className="w-full px-4 py-3 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+        className="w-full rounded-lg bg-[#d7b56d] px-4 py-3 font-medium text-[#111827] transition-colors hover:bg-[#e6c77f] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
       >
         {isLoading ? (
           <span className="flex items-center justify-center gap-2">

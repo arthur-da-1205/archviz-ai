@@ -9,6 +9,7 @@ interface GalleryProps {
   isGalleryLoading: boolean;
   onRegenerate: (image: GenerateImageResponse) => void;
   onDelete: (id: string) => void;
+  title?: string;
 }
 
 export default function Gallery({
@@ -17,6 +18,7 @@ export default function Gallery({
   isGalleryLoading,
   onRegenerate,
   onDelete,
+  title = "Your Designs",
 }: GalleryProps) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
@@ -59,7 +61,7 @@ export default function Gallery({
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold text-gray-900">Your Designs</h2>
+      <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {images.map((image) => (
@@ -71,7 +73,7 @@ export default function Gallery({
             <div className="relative bg-gray-100 aspect-square">
               {imageErrors.has(image.id) ? (
                 <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
-                  <span className="text-3xl mb-2">🖼️</span>
+                  <span className="mb-2 h-10 w-10 rounded-md border border-gray-300 bg-white"></span>
                   <p className="text-sm">Image unavailable</p>
                 </div>
               ) : (
