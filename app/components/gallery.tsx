@@ -1,21 +1,51 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 import { GenerateImageResponse } from "@/libs/types";
 
 interface GalleryProps {
   images: GenerateImageResponse[];
-  onRegenerate: (image: GenerateImageResponse) => void;
   isLoading: boolean;
+  isGalleryLoading: boolean;
+  onRegenerate: (image: GenerateImageResponse) => void;
+  onDelete: (id: string) => void;
 }
 
 export default function Gallery({
   images,
-  onRegenerate,
   isLoading,
+  isGalleryLoading,
+  onRegenerate,
+  onDelete,
 }: GalleryProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+
+  const handleImageError = (id: string) => {
+    setImageErrors((prev) => new Set(prev).add(id));
+  };
+
+  const handleDelete = (id: string) => {
+    if (deleteConfirmId === id) {
+      onDelete(id);
+      setDeleteConfirmId(null);
+    } else {
+      setDeleteConfirmId(id);
+      // Auto-cancel after 3 seconds
+      setTimeout(() => setDeleteConfirmId(null), 3000);
+    }
+  };
+
+  if (isGalleryLoading) {
+    return (
+      <div className="text-center py-12">
+        <div className="flex justify-center mb-4">
+          <div className="h-8 w-8 rounded-full border-4 border-gray-200 border-t-blue-500 animate-spin"></div>
+        </div>
+        <p className="text-gray-500">Loading gallery...</p>
+      </div>
+    );
+  }
 
   if (images.length === 0) {
     return (
@@ -39,11 +69,19 @@ export default function Gallery({
           >
             {/* Image */}
             <div className="relative bg-gray-100 aspect-square">
-              <img
-                src={image.imageUrl}
-                alt={image.prompt}
-                className="w-full h-full object-cover"
-              />
+              {imageErrors.has(image.id) ? (
+                <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                  <span className="text-3xl mb-2">🖼️</span>
+                  <p className="text-sm">Image unavailable</p>
+                </div>
+              ) : (
+                <img
+                  src={image.imageUrl}
+                  alt={image.prompt}
+                  className="w-full h-full object-cover"
+                  onError={() => handleImageError(image.id)}
+                />
+              )}
             </div>
 
             {/* Overlay (shows on hover) */}
@@ -61,16 +99,22 @@ export default function Gallery({
               {/* Actions */}
               <div className="flex gap-2">
                 <button
-                  onClick={() => {
-                    setSelectedId(image.id);
-                    onRegenerate(image);
-                  }}
+                  onClick={() => onRegenerate(image)}
                   disabled={isLoading}
                   className="flex-1 px-3 py-2 bg-blue-500 text-white text-sm font-medium rounded hover:bg-blue-600 disabled:bg-gray-500 transition-colors"
                 >
-                  {isLoading && selectedId === image.id
-                    ? "Regenerating..."
-                    : "Edit & Regenerate"}
+                  Edit & Regenerate
+                </button>
+                <button
+                  onClick={() => handleDelete(image.id)}
+                  disabled={isLoading}
+                  className={`px-3 py-2 text-sm font-medium rounded transition-colors ${
+                    deleteConfirmId === image.id
+                      ? "bg-red-600 text-white hover:bg-red-700"
+                      : "bg-white/20 text-white hover:bg-white/30"
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {deleteConfirmId === image.id ? "Confirm" : "Delete"}
                 </button>
               </div>
             </div>

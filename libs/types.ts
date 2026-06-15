@@ -1,5 +1,3 @@
-// API Request/Response types
-
 export interface GenerateImageRequest {
   prompt: string;
   style:
@@ -14,6 +12,7 @@ export interface GenerateImageResponse {
   id: string;
   prompt: string;
   style: string;
+  filename: string;
   imageUrl: string;
   createdAt: string;
 }

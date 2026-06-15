@@ -1,35 +1,41 @@
 "use client";
 
 import { GenerateImageResponse } from "@/libs/types";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import PromptForm from "./components/forms/prompt";
 import Gallery from "./components/gallery";
 import LoadingIndicator from "./components/loading-indicator";
 import ErrorMessage from "./components/error-message";
 
-// Initialize from localStorage
-function getInitialImages(): GenerateImageResponse[] {
-  if (typeof window === "undefined") return [];
-
-  const savedGallery = localStorage.getItem("gallery");
-  if (savedGallery) {
-    try {
-      return JSON.parse(savedGallery);
-    } catch (e) {
-      console.error("Failed to load gallery:", e);
-      return [];
-    }
-  }
-  return [];
-}
-
 export default function Home() {
-  const [images, setImages] = useState<GenerateImageResponse[]>(() =>
-    getInitialImages(),
-  );
+  const [images, setImages] = useState<GenerateImageResponse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGalleryLoading, setIsGalleryLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
+  const [editingStyle, setEditingStyle] = useState<string | null>(null);
+  const hasFetched = useRef(false);
+
+  useEffect(() => {
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
+    const loadGallery = async () => {
+      try {
+        const response = await fetch("/api/gallery");
+        if (response.ok) {
+          const data = await response.json();
+          setImages(data);
+        }
+      } catch (err) {
+        console.error("Failed to load gallery:", err);
+      } finally {
+        setIsGalleryLoading(false);
+      }
+    };
+
+    loadGallery();
+  }, []);
 
   const handleGenerate = async (prompt: string, style: string) => {
     setIsLoading(true);
@@ -43,18 +49,28 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to generate image");
+        let errorMessage = "Failed to generate image";
+        try {
+          const data = await response.json();
+          errorMessage = data.error || errorMessage;
+        } catch {
+          errorMessage = `Server returned an unexpected response (status ${response.status}). Please try again.`;
+        }
+        throw new Error(errorMessage);
       }
 
-      const newImage: GenerateImageResponse = await response.json();
+      let newImage: GenerateImageResponse;
+      try {
+        newImage = await response.json();
+      } catch {
+        throw new Error(
+          "Received an invalid response from the server. Please try again.",
+        );
+      }
 
-      // Update state and localStorage
-      const updatedGallery = [newImage, ...images];
-      setImages(updatedGallery);
-      localStorage.setItem("gallery", JSON.stringify(updatedGallery));
-
+      setImages((prev) => [newImage, ...prev]);
       setEditingPrompt(null);
+      setEditingStyle(null);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Something went wrong";
@@ -67,13 +83,30 @@ export default function Home() {
 
   const handleRegenerate = (image: GenerateImageResponse) => {
     setEditingPrompt(image.prompt);
-    // Scroll to form
+    setEditingStyle(image.style);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const response = await fetch(`/api/gallery/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete image");
+      }
+
+      setImages((prev) => prev.filter((img) => img.id !== id));
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to delete image";
+      setError(message);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
           <div>
@@ -85,10 +118,8 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Form (Left) */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow p-6 sticky top-8">
               <h2 className="text-xl font-bold text-gray-900 mb-4">
@@ -98,27 +129,27 @@ export default function Home() {
                 onSubmit={handleGenerate}
                 isLoading={isLoading}
                 initialPrompt={editingPrompt || ""}
+                initialStyle={editingStyle || ""}
               />
             </div>
           </div>
 
-          {/* Gallery (Right) */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow p-6">
               <Gallery
                 images={images}
-                onRegenerate={handleRegenerate}
                 isLoading={isLoading}
+                isGalleryLoading={isGalleryLoading}
+                onRegenerate={handleRegenerate}
+                onDelete={handleDelete}
               />
             </div>
           </div>
         </div>
       </main>
 
-      {/* Loading Indicator */}
       {isLoading && <LoadingIndicator />}
 
-      {/* Error Message */}
       {error && (
         <ErrorMessage message={error} onDismiss={() => setError(null)} />
       )}

@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ArchViz AI
 
-## Getting Started
+AI-powered architectural and interior design visualization. Generate design concepts from text prompts using Pollinations, with a persistent personal gallery.
 
-First, run the development server:
+## Quick Start
 
 ```bash
+# 1. Install dependencies
+npm install
+
+# 2. Copy environment file
+cp .env.local.example .env.local
+
+# 3. Add your Pollinations API key to .env.local
+# POLLINATIONS_API_KEY=...
+
+# 4. Start the dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# 5. Open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+You need a Pollinations API key for image generation. Create one at https://enter.pollinations.ai/.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable               | Required | Default             | Description                                  |
+| ---------------------- | -------- | ------------------- | -------------------------------------------- |
+| `DATABASE_URL`         | No       | `file:./gallery.db` | SQLite database path                         |
+| `POLLINATIONS_API_KEY` | Yes      | -                   | Pollinations API key used by `/api/generate` |
+| `POLLINATIONS_MODEL`   | No       | `flux`              | Pollinations image generation model          |
 
-## Learn More
+## How It Works
 
-To learn more about Next.js, take a look at the following resources:
+1. **Generate**: Type a prompt, pick a style, and click "Generate Design". The backend calls Pollinations, stores the generated image on disk, and saves metadata to SQLite.
+2. **Gallery**: All generated images persist in the gallery. Refresh the page - they're still there.
+3. **Re-generate**: Hover over any image, click "Edit & Regenerate", tweak the prompt or style, and generate a new version.
+4. **Delete**: Hover over an image and click "Delete" (click twice to confirm).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Architecture
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Frontend**: React 19 + Tailwind CSS, renders the prompt form and image gallery
+- **Backend**: Next.js API Routes - handles Pollinations calls, image storage, and database operations
+- **Database**: SQLite (better-sqlite3) with WAL mode for concurrent access
+- **Image Storage**: Downloaded from Pollinations responses and saved to `storage/` directory, served via `/api/images/[filename]`
+- **AI API**: Pollinations, defaults to the `flux` model
 
-## Deploy on Vercel
+## Error Handling
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The app handles three failure states visibly:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **API Timeout**: If Pollinations takes too long or fails, the error is caught and shown in the UI
+- **Invalid Prompt**: Empty or too-long prompts are rejected with a validation error
+- **Broken Response**: If the API returns non-image data, the error is caught and displayed
+
+## Tech Stack
+
+- Next.js 16 (App Router)
+- React 19
+- TypeScript (strict mode)
+- Tailwind CSS 4
+- better-sqlite3
+- Pollinations API
+
+## Scripts
+
+```bash
+npm run dev      # Start development server
+npm run build    # Build for production
+npm run start    # Start production server
+npm run lint     # Run ESLint
+```
+
+## Known Limitations
+
+- **Single server**: SQLite doesn't scale horizontally. For multi-server deployment, switch to PostgreSQL.
+- **No authentication**: All users share the same gallery. Add auth if user isolation is needed.
+- **File-based storage**: Images are stored on the local filesystem. For cloud deployment (e.g., Vercel), use object storage (S3, R2) instead.
+- **Generation speed**: Pollinations generation time depends on the selected model and current quota.

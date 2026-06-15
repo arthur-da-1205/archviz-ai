@@ -36,6 +36,16 @@ yarn-error.log*
 # vercel
 .vercel
 
+# database
+gallery.db
+gallery.db-shm
+gallery.db-wal
+
+# generated images
+storage/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+storage

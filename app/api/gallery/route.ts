@@ -1,16 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getImages } from "@/libs/db";
 import { GenerateImageResponse } from "@/libs/types";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const images = getImages();
 
-    console.log(`📷 Fetched ${images.length} images from gallery`);
+    const response: GenerateImageResponse[] = images.map((img) => ({
+      id: img.id,
+      prompt: img.prompt,
+      style: img.style || "",
+      imageUrl: `/api/images/${img.filename}`,
+      createdAt: img.createdAt,
+    }));
 
-    return NextResponse.json(images as GenerateImageResponse[]);
+    return NextResponse.json(response);
   } catch (error) {
-    console.error("❌ Error in /api/gallery:", error);
+    console.error("Error in /api/gallery:", error);
 
     return NextResponse.json(
       { error: "Failed to fetch gallery" },

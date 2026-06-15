@@ -1,11 +1,10 @@
 import Database from "better-sqlite3";
-import path from "path";
 
 // Initialize database
 const dbPath = process.env.DATABASE_URL?.replace("file:", "") || "./gallery.db";
 const db = new Database(dbPath);
 
-// Enable foreign keys
+// Enable WAL mode for concurrent read/write
 db.pragma("journal_mode = WAL");
 
 // Create images table
@@ -14,7 +13,7 @@ db.exec(`
     id TEXT PRIMARY KEY,
     prompt TEXT NOT NULL,
     style TEXT,
-    imageUrl TEXT NOT NULL,
+    filename TEXT NOT NULL,
     createdAt TEXT NOT NULL
   )
 `);
@@ -24,7 +23,7 @@ export interface ImageRecord {
   id: string;
   prompt: string;
   style: string | null;
-  imageUrl: string;
+  filename: string;
   createdAt: string;
 }
 
@@ -32,17 +31,17 @@ export interface ImageRecord {
 export function saveImage(data: {
   prompt: string;
   style: string;
-  imageUrl: string;
+  filename: string;
 }): ImageRecord {
-  const id = crypto.getRandomValues(new Uint8Array(16)).toString();
+  const id = `img_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const createdAt = new Date().toISOString();
 
   const stmt = db.prepare(
-    `INSERT INTO images (id, prompt, style, imageUrl, createdAt)
+    `INSERT INTO images (id, prompt, style, filename, createdAt)
      VALUES (?, ?, ?, ?, ?)`,
   );
 
-  stmt.run(id, data.prompt, data.style, data.imageUrl, createdAt);
+  stmt.run(id, data.prompt, data.style, data.filename, createdAt);
 
   return { id, ...data, createdAt };
 }

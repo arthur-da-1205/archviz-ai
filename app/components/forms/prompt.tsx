@@ -6,6 +6,7 @@ interface PromptFormProps {
   onSubmit: (prompt: string, style: string) => Promise<void>;
   isLoading: boolean;
   initialPrompt?: string;
+  initialStyle?: string;
 }
 
 const STYLES = [
@@ -20,26 +21,33 @@ export default function PromptForm({
   onSubmit,
   isLoading,
   initialPrompt = "",
+  initialStyle = "",
 }: PromptFormProps) {
-  // Use initialPrompt as default value
   const [prompt, setPrompt] = useState(initialPrompt);
-  const [style, setStyle] = useState("modern");
+  const [style, setStyle] = useState(initialStyle || "modern");
+  const [lastInitialPrompt, setLastInitialPrompt] = useState(initialPrompt);
+  const [lastInitialStyle, setLastInitialStyle] = useState(initialStyle);
 
-  // When initialPrompt changes, update local state
-  // (but NOT in useEffect - just control it via form)
-  const displayPrompt = initialPrompt || prompt;
+  // Sync when parent changes initialPrompt/initialStyle (from re-generation)
+  if (initialPrompt !== lastInitialPrompt) {
+    setPrompt(initialPrompt);
+    setLastInitialPrompt(initialPrompt);
+  }
+  if (initialStyle !== lastInitialStyle) {
+    setStyle(initialStyle || "modern");
+    setLastInitialStyle(initialStyle);
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (displayPrompt.trim()) {
-      await onSubmit(displayPrompt, style);
+    if (prompt.trim()) {
+      await onSubmit(prompt.trim(), style);
       setPrompt("");
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Prompt Input */}
       <div className="space-y-2">
         <label
           htmlFor="prompt"
@@ -49,7 +57,7 @@ export default function PromptForm({
         </label>
         <textarea
           id="prompt"
-          value={displayPrompt}
+          value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="e.g., A modern kitchen with white marble countertops, brass fixtures, and natural light"
           className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
@@ -58,11 +66,10 @@ export default function PromptForm({
           maxLength={500}
         />
         <p className="text-xs text-gray-500">
-          {displayPrompt.length}/500 characters
+          {prompt.length}/500 characters
         </p>
       </div>
 
-      {/* Style Selection */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">
           Design style
@@ -86,10 +93,9 @@ export default function PromptForm({
         </div>
       </div>
 
-      {/* Submit Button */}
       <button
         type="submit"
-        disabled={!displayPrompt.trim() || isLoading}
+        disabled={!prompt.trim() || isLoading}
         className="w-full px-4 py-3 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
       >
         {isLoading ? (
