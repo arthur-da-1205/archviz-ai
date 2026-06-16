@@ -30,7 +30,7 @@ You need a Pollinations API key for image generation. Create one at https://ente
 | `STORAGE_DIR`          | No       | `./storage`         | Directory for generated image files          |
 | `POLLINATIONS_API_KEY` | Yes      | -                   | Pollinations API key used by `/api/generate` |
 | `POLLINATIONS_MODEL`   | No       | `flux`              | Pollinations image generation model          |
-| `AI_IMAGE_TIMEOUT_MS`  | No       | `90000`             | Timeout for upstream image generation        |
+| `AI_IMAGE_TIMEOUT_MS`  | No       | `30000`             | Timeout for upstream image generation        |
 
 ## How It Works
 
@@ -39,6 +39,7 @@ You need a Pollinations API key for image generation. Create one at https://ente
 3. **Gallery**: Generated images persist in that user's gallery. Refresh the page - they're still there.
 4. **Re-generate**: Hover over any image, click "Edit & Regenerate", tweak the prompt or style, and generate a new version.
 5. **Delete**: Hover over an image and click "Delete" (click twice to confirm).
+6. **Recover**: Failed generations are shown in Playground with the error, duration, and a retry action.
 
 ## Architecture
 

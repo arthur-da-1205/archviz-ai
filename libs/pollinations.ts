@@ -3,7 +3,7 @@ import path from "path";
 
 const STORAGE_DIR =
   process.env.STORAGE_DIR || path.join(process.cwd(), "storage");
-const DEFAULT_TIMEOUT_MS = 90000;
+const DEFAULT_TIMEOUT_MS = process.env.AI_IMAGE_TIMEOUT_MS;
 
 if (!fs.existsSync(STORAGE_DIR)) {
   fs.mkdirSync(STORAGE_DIR, { recursive: true });
@@ -48,7 +48,8 @@ export async function generateImageFromPrompt(
 
   console.log("🎨 Creating Pollinations image...");
 
-  const timeoutMs = Number(process.env.AI_IMAGE_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;
+  const timeoutMs =
+    Number(process.env.AI_IMAGE_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -63,7 +64,9 @@ export async function generateImageFromPrompt(
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error(`Pollinations timeout after ${timeoutMs / 1000}s`);
+      throw new Error(
+        `Image generation timed out after ${timeoutMs / 1000}s. Please retry when the provider is reachable.`,
+      );
     }
     throw error;
   } finally {

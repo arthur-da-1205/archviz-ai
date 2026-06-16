@@ -40,6 +40,7 @@
 - Broken response: backend rejects non-image responses from Pollinations.
 - Missing image: image route returns 404 and the gallery shows an unavailable state.
 - API/provider errors: backend returns a visible error message to the frontend.
+- Failed generation history: frontend stores recent failed attempts per email so users can retry the same prompt, style, and size.
 
 ## Build Process
 

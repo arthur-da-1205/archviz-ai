@@ -2,7 +2,7 @@
 "use client";
 
 import { GenerateImageResponse } from "@/libs/types";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import PromptForm from "./forms/prompt";
 import Gallery from "./gallery";
@@ -18,6 +18,8 @@ const ROUTES: Record<ActiveView, string> = {
 };
 const USER_EMAIL_KEY = "archviz_user_email";
 const LEGACY_USER_NAME_KEY = "archviz_user_name";
+const FAILED_GENERATIONS_KEY_PREFIX = "archviz_failed_generations";
+const MAX_FAILED_GENERATIONS = 8;
 
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
@@ -27,8 +29,37 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(value));
 }
 
+function getFailedGenerationsKey(email: string) {
+  return `${FAILED_GENERATIONS_KEY_PREFIX}:${email}`;
+}
+
+function normalizeGenerateError(error: unknown) {
+  if (!(error instanceof Error)) return "Something went wrong";
+
+  if (error.message.trim().toLowerCase() === "fetch failed") {
+    return "Failed to fetch";
+  }
+
+  return error.message;
+}
+
+function getFailedGenerationTimeLabel(value: string) {
+  return value.includes("T") ? "Previous attempt" : value;
+}
+
 interface ArchvizAppProps {
   view: ActiveView;
+}
+
+interface FailedGeneration {
+  id: string;
+  prompt: string;
+  style: string;
+  width: number;
+  height: number;
+  error: string;
+  durationSeconds: number;
+  createdAt: string;
 }
 
 export default function ArchvizApp({ view }: ArchvizAppProps) {
@@ -44,6 +75,10 @@ export default function ArchvizApp({ view }: ArchvizAppProps) {
   const [editingStyle, setEditingStyle] = useState<string | null>(null);
   const [editingWidth, setEditingWidth] = useState<number | null>(null);
   const [editingHeight, setEditingHeight] = useState<number | null>(null);
+  const [failedGenerations, setFailedGenerations] = useState<
+    FailedGeneration[]
+  >([]);
+  const failedGenerationCounter = useRef(0);
 
   useEffect(() => {
     const storedEmail = localStorage.getItem(USER_EMAIL_KEY) || "";
@@ -85,8 +120,22 @@ export default function ArchvizApp({ view }: ArchvizAppProps) {
   useEffect(() => {
     if (!userEmail) {
       setImages([]);
+      setFailedGenerations([]);
       setIsGalleryLoading(false);
       return;
+    }
+
+    try {
+      const storedFailures = localStorage.getItem(
+        getFailedGenerationsKey(userEmail),
+      );
+      const parsedFailures = storedFailures
+        ? (JSON.parse(storedFailures) as FailedGeneration[])
+        : [];
+      setFailedGenerations(parsedFailures);
+      failedGenerationCounter.current = parsedFailures.length;
+    } catch {
+      setFailedGenerations([]);
     }
 
     const loadGallery = async () => {
@@ -145,6 +194,7 @@ export default function ArchvizApp({ view }: ArchvizAppProps) {
     setUserEmail("");
     setEmailInput("");
     setImages([]);
+    setFailedGenerations([]);
     setEditingPrompt(null);
     setEditingStyle(null);
     setEditingWidth(null);
@@ -165,6 +215,10 @@ export default function ArchvizApp({ view }: ArchvizAppProps) {
 
     setIsLoading(true);
     setError(null);
+    let elapsedSeconds = 0;
+    const elapsedTimer = window.setInterval(() => {
+      elapsedSeconds += 1;
+    }, 1000);
 
     try {
       const response = await fetch("/api/generate", {
@@ -203,13 +257,52 @@ export default function ArchvizApp({ view }: ArchvizAppProps) {
       setEditingHeight(null);
       sessionStorage.removeItem(REGENERATE_DRAFT_KEY);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Something went wrong";
+      const message = normalizeGenerateError(err);
       setError(message);
+      failedGenerationCounter.current += 1;
+      const failedGeneration: FailedGeneration = {
+        id: `${userEmail}_${failedGenerationCounter.current}`,
+        prompt,
+        style,
+        width,
+        height,
+        error: message,
+        durationSeconds: Math.max(1, elapsedSeconds),
+        createdAt: "Just now",
+      };
+      setFailedGenerations((prev) => {
+        const next = [failedGeneration, ...prev].slice(
+          0,
+          MAX_FAILED_GENERATIONS,
+        );
+        localStorage.setItem(
+          getFailedGenerationsKey(userEmail),
+          JSON.stringify(next),
+        );
+        return next;
+      });
       console.error("Generate error:", err);
     } finally {
+      window.clearInterval(elapsedTimer);
       setIsLoading(false);
     }
+  };
+
+  const handleRetryFailedGeneration = (failedGeneration: FailedGeneration) => {
+    void handleGenerate(
+      failedGeneration.prompt,
+      failedGeneration.style,
+      failedGeneration.width,
+      failedGeneration.height,
+    );
+  };
+
+  const handleClearFailedGenerations = () => {
+    if (userEmail) {
+      localStorage.removeItem(getFailedGenerationsKey(userEmail));
+    }
+    setFailedGenerations([]);
+    failedGenerationCounter.current = 0;
   };
 
   const handleRegenerate = (image: GenerateImageResponse) => {
@@ -393,6 +486,69 @@ export default function ArchvizApp({ view }: ArchvizAppProps) {
                     View Gallery
                   </button>
                 </div>
+
+                {failedGenerations.length > 0 && (
+                  <div className="mb-6 rounded-lg border border-rose-200 bg-rose-50 p-4">
+                    <div className="mb-3 flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-rose-700">
+                          Failed History
+                        </h3>
+                        <p className="mt-1 text-sm text-rose-900">
+                          Failed attempts are saved here for quick retry.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleClearFailedGenerations}
+                        className="shrink-0 rounded-md border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                      >
+                        Clear
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {failedGenerations.map((failedGeneration) => (
+                        <div
+                          key={failedGeneration.id}
+                          className="rounded-md border border-rose-200 bg-white p-3"
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0">
+                              <p className="line-clamp-2 text-sm font-medium text-[#17202a]">
+                                {failedGeneration.prompt}
+                              </p>
+                              <p className="mt-2 text-xs text-rose-700">
+                                {failedGeneration.error}
+                              </p>
+                              <p className="mt-2 text-xs text-gray-500">
+                                {failedGeneration.style} style -{" "}
+                                {failedGeneration.width}x
+                                {failedGeneration.height} -{" "}
+                                {failedGeneration.durationSeconds}s -{" "}
+                                {getFailedGenerationTimeLabel(
+                                  failedGeneration.createdAt,
+                                )}
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleRetryFailedGeneration(failedGeneration)
+                              }
+                              disabled={isLoading}
+                              className="rounded-md bg-[#1f2933] px-4 py-2 text-sm font-semibold text-white hover:bg-[#111827] disabled:cursor-not-allowed disabled:bg-gray-400"
+                            >
+                              Retry
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <Gallery
                   images={images.slice(0, 6)}
                   isLoading={isLoading}
