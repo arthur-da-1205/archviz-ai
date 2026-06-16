@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
 
-const STORAGE_DIR = path.join(process.cwd(), "storage");
+const STORAGE_DIR =
+  process.env.STORAGE_DIR || path.join(process.cwd(), "storage");
 const DEFAULT_TIMEOUT_MS = 90000;
 
 if (!fs.existsSync(STORAGE_DIR)) {

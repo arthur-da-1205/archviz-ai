@@ -65,7 +65,7 @@ export default function Home() {
       return;
     }
 
-    if (view !== "home" && !userName) {
+    if (!userName) {
       setPendingView(view);
       return;
     }

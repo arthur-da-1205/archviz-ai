@@ -27,6 +27,7 @@ You need a Pollinations API key for image generation. Create one at https://ente
 | Variable               | Required | Default             | Description                                  |
 | ---------------------- | -------- | ------------------- | -------------------------------------------- |
 | `DATABASE_URL`         | No       | `file:./gallery.db` | SQLite database path                         |
+| `STORAGE_DIR`          | No       | `./storage`         | Directory for generated image files          |
 | `POLLINATIONS_API_KEY` | Yes      | -                   | Pollinations API key used by `/api/generate` |
 | `POLLINATIONS_MODEL`   | No       | `flux`              | Pollinations image generation model          |
 | `AI_IMAGE_TIMEOUT_MS`  | No       | `90000`             | Timeout for upstream image generation        |

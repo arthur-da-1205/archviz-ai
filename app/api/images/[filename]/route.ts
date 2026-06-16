@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-const STORAGE_DIR = path.join(process.cwd(), "storage");
+const STORAGE_DIR =
+  process.env.STORAGE_DIR || path.join(process.cwd(), "storage");
 
 function getContentType(filename: string): string {
   const ext = path.extname(filename).toLowerCase();

@@ -48,4 +48,4 @@ storage/
 *.tsbuildinfo
 next-env.d.ts
 
-storage
+.commandcode/
