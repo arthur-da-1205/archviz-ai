@@ -3,7 +3,7 @@ import path from "path";
 
 const STORAGE_DIR =
   process.env.STORAGE_DIR || path.join(process.cwd(), "storage");
-const DEFAULT_TIMEOUT_MS = process.env.AI_IMAGE_TIMEOUT_MS;
+const DEFAULT_TIMEOUT_MS = 30000;
 
 if (!fs.existsSync(STORAGE_DIR)) {
   fs.mkdirSync(STORAGE_DIR, { recursive: true });
@@ -19,6 +19,13 @@ function getExtension(contentType: string): string {
   if (contentType.includes("image/webp")) return "webp";
   if (contentType.includes("image/gif")) return "gif";
   return "jpg";
+}
+
+function getTimeoutMs(): number {
+  const timeoutMs = Number(process.env.AI_IMAGE_TIMEOUT_MS);
+  return Number.isFinite(timeoutMs) && timeoutMs > 0
+    ? timeoutMs
+    : DEFAULT_TIMEOUT_MS;
 }
 
 export async function generateImageFromPrompt(
@@ -48,8 +55,7 @@ export async function generateImageFromPrompt(
 
   console.log("🎨 Creating Pollinations image...");
 
-  const timeoutMs =
-    Number(process.env.AI_IMAGE_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;
+  const timeoutMs = getTimeoutMs();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
