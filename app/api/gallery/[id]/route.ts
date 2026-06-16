@@ -12,7 +12,7 @@ export async function DELETE(
     const ownerName = getOwnerName(_request);
     if (!ownerName) {
       return NextResponse.json(
-        { error: "User name is required" },
+        { error: "A valid email is required" },
         { status: 401 },
       );
     }

@@ -3,18 +3,18 @@
 ## App Journey
 
 1. User opens Home and sees the application purpose.
-2. User clicks Playground or Gallery.
-3. Frontend asks for a name as a lightweight identity.
-4. Frontend stores the name in `localStorage`.
+2. User opens `/playground` or `/gallery`.
+3. Frontend asks for an email as a lightweight identity.
+4. Frontend stores the email in `localStorage`.
 5. Frontend sends API requests with `x-archviz-user`.
-6. Backend validates the user name and prompt.
+6. Backend validates the user email and prompt.
 7. Backend enhances the prompt with style and quality keywords.
 8. Backend calls Pollinations from the server only.
 9. Pollinations returns image data to the backend.
 10. Backend stores the image in `storage/`.
 11. Backend saves metadata to SQLite with `ownerName`, prompt, style, width, height, filename, and timestamp.
 12. Frontend receives `/api/images/{filename}` and renders the result.
-13. Gallery requests only return images for the active name.
+13. Gallery requests only return images for the active email.
 
 ## Tech Stack
 
@@ -30,7 +30,7 @@
 
 - AI calls never run in the browser. `/api/generate` is the only path to Pollinations.
 - Images are stored server-side before the frontend sees them.
-- Gallery ownership uses a lightweight name-based identity instead of full auth. This is enough for the assessment flow and keeps the app simple.
+- Gallery ownership uses a lightweight email-based identity instead of full auth. This is enough for the assessment flow and keeps the app simple while reducing accidental gallery overlap.
 - SQLite uses WAL mode so reads and writes can happen concurrently.
 - Image serving uses content type detection so JPEG/PNG/WebP outputs preview correctly.
 
@@ -48,4 +48,4 @@
 3. Added re-generation from saved prompt/style.
 4. Replaced provider experiments with a single Pollinations path once it worked reliably.
 5. Added Home, Playground, and Gallery navigation.
-6. Added lightweight identity so each reviewer has a separate personal gallery.
+6. Added lightweight email identity so each reviewer has a separate personal gallery.

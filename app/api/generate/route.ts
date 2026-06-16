@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const ownerName = getOwnerName(request);
     if (!ownerName) {
       return NextResponse.json(
-        { error: "User name is required" },
+        { error: "A valid email is required" },
         { status: 401 },
       );
     }
