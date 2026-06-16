@@ -35,7 +35,7 @@ You need a Pollinations API key for image generation. Create one at https://ente
 ## How It Works
 
 1. **Identify**: Enter a name before opening Playground or Gallery. This lightweight identity separates each user's saved images.
-2. **Generate**: Type a prompt, pick a style, and click "Generate Design". The backend calls Pollinations, stores the generated image on disk, and saves metadata to SQLite under that name.
+2. **Generate**: Type a prompt, pick a style and output size, then click "Generate Design". The backend calls Pollinations, stores the generated image on disk, and saves metadata to SQLite under that name.
 3. **Gallery**: Generated images persist in that user's gallery. Refresh the page - they're still there.
 4. **Re-generate**: Hover over any image, click "Edit & Regenerate", tweak the prompt or style, and generate a new version.
 5. **Delete**: Hover over an image and click "Delete" (click twice to confirm).

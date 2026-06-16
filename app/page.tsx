@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { GenerateImageResponse } from "@/libs/types";
@@ -20,6 +21,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
   const [editingStyle, setEditingStyle] = useState<string | null>(null);
+  const [editingWidth, setEditingWidth] = useState<number | null>(null);
+  const [editingHeight, setEditingHeight] = useState<number | null>(null);
 
   useEffect(() => {
     const storedName = localStorage.getItem("archviz_user_name") || "";
@@ -91,10 +94,17 @@ export default function Home() {
     setImages([]);
     setEditingPrompt(null);
     setEditingStyle(null);
+    setEditingWidth(null);
+    setEditingHeight(null);
     setActiveView("home");
   };
 
-  const handleGenerate = async (prompt: string, style: string) => {
+  const handleGenerate = async (
+    prompt: string,
+    style: string,
+    width: number,
+    height: number,
+  ) => {
     if (!userName) {
       setPendingView("playground");
       return;
@@ -110,7 +120,7 @@ export default function Home() {
           "Content-Type": "application/json",
           "x-archviz-user": userName,
         },
-        body: JSON.stringify({ prompt, style }),
+        body: JSON.stringify({ prompt, style, width, height }),
       });
 
       if (!response.ok) {
@@ -136,6 +146,8 @@ export default function Home() {
       setImages((prev) => [newImage, ...prev]);
       setEditingPrompt(null);
       setEditingStyle(null);
+      setEditingWidth(null);
+      setEditingHeight(null);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Something went wrong";
@@ -149,6 +161,8 @@ export default function Home() {
   const handleRegenerate = (image: GenerateImageResponse) => {
     setEditingPrompt(image.prompt);
     setEditingStyle(image.style);
+    setEditingWidth(image.width);
+    setEditingHeight(image.height);
     setActiveView("playground");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -215,11 +229,13 @@ export default function Home() {
 
             {userName && (
               <div className="flex items-center justify-between gap-3 rounded-full border border-black/10 bg-white px-3 py-2 text-sm text-[#46515f] sm:justify-start">
-                <span className="max-w-[160px] truncate">{userName}</span>
+                <span className="max-w-[160px] truncate font-semibold">
+                  {userName}
+                </span>
                 <button
                   type="button"
                   onClick={handleSwitchUser}
-                  className="font-medium text-[#17202a] hover:underline"
+                  className="font-medium text-rose-400 cursor-pointer hover:underline"
                 >
                   Switch
                 </button>
@@ -291,6 +307,8 @@ export default function Home() {
                   isLoading={isLoading}
                   initialPrompt={editingPrompt || ""}
                   initialStyle={editingStyle || ""}
+                  initialWidth={editingWidth || 1024}
+                  initialHeight={editingHeight || 1024}
                 />
               </div>
 

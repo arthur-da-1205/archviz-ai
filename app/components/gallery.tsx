@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState } from "react";
@@ -22,6 +23,8 @@ export default function Gallery({
 }: GalleryProps) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  const [previewImage, setPreviewImage] =
+    useState<GenerateImageResponse | null>(null);
 
   const handleImageError = (id: string) => {
     setImageErrors((prev) => new Set(prev).add(id));
@@ -67,7 +70,21 @@ export default function Gallery({
         {images.map((image) => (
           <div
             key={image.id}
-            className="group relative overflow-hidden rounded-lg border border-gray-200 hover:shadow-lg transition-shadow"
+            role="button"
+            tabIndex={0}
+            onClick={() => {
+              if (!imageErrors.has(image.id)) setPreviewImage(image);
+            }}
+            onKeyDown={(event) => {
+              if (
+                (event.key === "Enter" || event.key === " ") &&
+                !imageErrors.has(image.id)
+              ) {
+                event.preventDefault();
+                setPreviewImage(image);
+              }
+            }}
+            className="group relative overflow-hidden rounded-lg border border-gray-200 text-left transition-shadow hover:shadow-lg"
           >
             {/* Image */}
             <div className="relative bg-gray-100 aspect-square">
@@ -96,19 +113,30 @@ export default function Gallery({
                 <span className="inline-block mt-2 px-2 py-1 bg-blue-500 text-white text-xs rounded">
                   {image.style}
                 </span>
+                <span className="ml-2 inline-block rounded bg-white/20 px-2 py-1 text-xs text-white">
+                  {image.width}x{image.height}
+                </span>
               </div>
 
               {/* Actions */}
               <div className="flex gap-2">
                 <button
-                  onClick={() => onRegenerate(image)}
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onRegenerate(image);
+                  }}
                   disabled={isLoading}
                   className="flex-1 px-3 py-2 bg-blue-500 text-white text-sm font-medium rounded hover:bg-blue-600 disabled:bg-gray-500 transition-colors"
                 >
                   Edit & Regenerate
                 </button>
                 <button
-                  onClick={() => handleDelete(image.id)}
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleDelete(image.id);
+                  }}
                   disabled={isLoading}
                   className={`px-3 py-2 text-sm font-medium rounded transition-colors ${
                     deleteConfirmId === image.id
@@ -128,6 +156,97 @@ export default function Gallery({
           </div>
         ))}
       </div>
+
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4 py-6"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div
+            className="relative grid max-h-[92vh] w-full max-w-6xl grid-cols-1 overflow-hidden rounded-lg bg-white shadow-2xl lg:grid-cols-[1fr_360px]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex min-h-[320px] items-center justify-center bg-[#111827]">
+              <img
+                src={previewImage.imageUrl}
+                alt={previewImage.prompt}
+                className="max-h-[72vh] w-full object-contain"
+              />
+            </div>
+
+            <aside className="flex flex-col gap-5 p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6b7b68]">
+                    Preview
+                  </p>
+                  <h3 className="mt-2 text-xl font-semibold text-[#17202a]">
+                    Generated Concept
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPreviewImage(null)}
+                  className="rounded-md border border-black/10 px-3 py-2 text-sm font-medium text-[#17202a] hover:bg-[#f6f3ee]"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
+                  Prompt
+                </p>
+                <p className="text-sm leading-6 text-gray-700">
+                  {previewImage.prompt}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-md bg-[#f6f3ee] p-3">
+                  <p className="text-xs uppercase text-gray-500">Style</p>
+                  <p className="mt-1 font-medium text-[#17202a]">
+                    {previewImage.style}
+                  </p>
+                </div>
+                <div className="rounded-md bg-[#f6f3ee] p-3">
+                  <p className="text-xs uppercase text-gray-500">Size</p>
+                  <p className="mt-1 font-medium text-[#17202a]">
+                    {previewImage.width}x{previewImage.height}
+                  </p>
+                </div>
+                <div className="col-span-2 rounded-md bg-[#f6f3ee] p-3">
+                  <p className="text-xs uppercase text-gray-500">Created</p>
+                  <p className="mt-1 font-medium text-[#17202a]">
+                    {new Date(previewImage.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-auto flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewImage(null);
+                    onRegenerate(previewImage);
+                  }}
+                  disabled={isLoading}
+                  className="flex-1 rounded-md bg-[#1f2933] px-4 py-3 text-sm font-semibold text-white hover:bg-[#111827] disabled:cursor-not-allowed disabled:bg-gray-400"
+                >
+                  Edit & Regenerate
+                </button>
+                <a
+                  href={previewImage.imageUrl}
+                  download={previewImage.filename}
+                  className="rounded-md border border-black/10 px-4 py-3 text-sm font-semibold text-[#17202a] hover:bg-[#f6f3ee]"
+                >
+                  Download
+                </a>
+              </div>
+            </aside>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -12,7 +12,7 @@
 8. Backend calls Pollinations from the server only.
 9. Pollinations returns image data to the backend.
 10. Backend stores the image in `storage/`.
-11. Backend saves metadata to SQLite with `ownerName`, prompt, style, filename, and timestamp.
+11. Backend saves metadata to SQLite with `ownerName`, prompt, style, width, height, filename, and timestamp.
 12. Frontend receives `/api/images/{filename}` and renders the result.
 13. Gallery requests only return images for the active name.
 

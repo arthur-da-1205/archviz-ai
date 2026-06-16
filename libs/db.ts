@@ -15,6 +15,8 @@ db.exec(`
     prompt TEXT NOT NULL,
     style TEXT,
     filename TEXT NOT NULL,
+    width INTEGER NOT NULL DEFAULT 1024,
+    height INTEGER NOT NULL DEFAULT 1024,
     createdAt TEXT NOT NULL
   )
 `);
@@ -24,7 +26,17 @@ const imageColumns = db
   .all() as Array<{ name: string }>;
 
 if (!imageColumns.some((column) => column.name === "ownerName")) {
-  db.exec("ALTER TABLE images ADD COLUMN ownerName TEXT NOT NULL DEFAULT 'legacy'");
+  db.exec(
+    "ALTER TABLE images ADD COLUMN ownerName TEXT NOT NULL DEFAULT 'legacy'",
+  );
+}
+
+if (!imageColumns.some((column) => column.name === "width")) {
+  db.exec("ALTER TABLE images ADD COLUMN width INTEGER NOT NULL DEFAULT 1024");
+}
+
+if (!imageColumns.some((column) => column.name === "height")) {
+  db.exec("ALTER TABLE images ADD COLUMN height INTEGER NOT NULL DEFAULT 1024");
 }
 
 // Types
@@ -34,6 +46,8 @@ export interface ImageRecord {
   prompt: string;
   style: string | null;
   filename: string;
+  width: number;
+  height: number;
   createdAt: string;
 }
 
@@ -43,13 +57,15 @@ export function saveImage(data: {
   prompt: string;
   style: string;
   filename: string;
+  width: number;
+  height: number;
 }): ImageRecord {
   const id = `img_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const createdAt = new Date().toISOString();
 
   const stmt = db.prepare(
-    `INSERT INTO images (id, ownerName, prompt, style, filename, createdAt)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO images (id, ownerName, prompt, style, filename, width, height, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   );
 
   stmt.run(
@@ -58,6 +74,8 @@ export function saveImage(data: {
     data.prompt,
     data.style,
     data.filename,
+    data.width,
+    data.height,
     createdAt,
   );
 

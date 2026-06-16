@@ -21,6 +21,8 @@ export async function GET(request: NextRequest) {
       style: img.style || "",
       filename: img.filename,
       imageUrl: `/api/images/${img.filename}`,
+      width: img.width,
+      height: img.height,
       createdAt: img.createdAt,
     }));
 

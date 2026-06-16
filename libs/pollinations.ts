@@ -24,6 +24,8 @@ function getExtension(contentType: string): string {
 export async function generateImageFromPrompt(
   prompt: string,
   style: string,
+  width: number,
+  height: number,
 ): Promise<GenerateImageResult> {
   const enhancedPrompt = [
     prompt,
@@ -37,8 +39,8 @@ export async function generateImageFromPrompt(
   const url = new URL(
     `https://gen.pollinations.ai/image/${encodeURIComponent(enhancedPrompt)}`,
   );
-  url.searchParams.set("width", "1024");
-  url.searchParams.set("height", "1024");
+  url.searchParams.set("width", width.toString());
+  url.searchParams.set("height", height.toString());
   url.searchParams.set("model", process.env.POLLINATIONS_MODEL || "flux");
   if (apiKey) {
     url.searchParams.set("key", apiKey);

@@ -6,6 +6,8 @@ export interface GenerateImageRequest {
     | "industrial"
     | "traditional"
     | "contemporary";
+  width?: number;
+  height?: number;
 }
 
 export interface GenerateImageResponse {
@@ -14,6 +16,8 @@ export interface GenerateImageResponse {
   style: string;
   filename: string;
   imageUrl: string;
+  width: number;
+  height: number;
   createdAt: string;
 }
 
