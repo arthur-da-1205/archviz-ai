@@ -8,6 +8,7 @@ import PromptForm from "./forms/prompt";
 import Gallery from "./gallery";
 import LoadingIndicator from "./loading-indicator";
 import ErrorMessage from "./error-message";
+import SuccessMessage from "./success-message";
 
 type ActiveView = "home" | "playground" | "gallery";
 const REGENERATE_DRAFT_KEY = "archviz_regenerate_draft";
@@ -71,6 +72,7 @@ export default function ArchvizApp({ view }: ArchvizAppProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isGalleryLoading, setIsGalleryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
   const [editingStyle, setEditingStyle] = useState<string | null>(null);
   const [editingWidth, setEditingWidth] = useState<number | null>(null);
@@ -116,6 +118,16 @@ export default function ArchvizApp({ view }: ArchvizAppProps) {
       setPendingView(view);
     }
   }, [view, userEmail]);
+
+  useEffect(() => {
+    if (!successMessage) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setSuccessMessage(null);
+    }, 3500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [successMessage]);
 
   useEffect(() => {
     if (!userEmail) {
@@ -215,6 +227,7 @@ export default function ArchvizApp({ view }: ArchvizAppProps) {
 
     setIsLoading(true);
     setError(null);
+    setSuccessMessage(null);
     let elapsedSeconds = 0;
     const elapsedTimer = window.setInterval(() => {
       elapsedSeconds += 1;
@@ -255,6 +268,7 @@ export default function ArchvizApp({ view }: ArchvizAppProps) {
       setEditingStyle(null);
       setEditingWidth(null);
       setEditingHeight(null);
+      setSuccessMessage("Image generated successfully and saved to gallery.");
       sessionStorage.removeItem(REGENERATE_DRAFT_KEY);
     } catch (err) {
       const message = normalizeGenerateError(err);
@@ -657,6 +671,13 @@ export default function ArchvizApp({ view }: ArchvizAppProps) {
 
       {error && (
         <ErrorMessage message={error} onDismiss={() => setError(null)} />
+      )}
+
+      {successMessage && (
+        <SuccessMessage
+          message={successMessage}
+          onDismiss={() => setSuccessMessage(null)}
+        />
       )}
     </div>
   );

@@ -74,10 +74,3 @@ npm run build    # Build for production
 npm run start    # Start production server
 npm run lint     # Run ESLint
 ```
-
-## Known Limitations
-
-- **Single server**: SQLite doesn't scale horizontally. For multi-server deployment, switch to PostgreSQL.
-- **Lightweight authentication**: Users are separated by email only. Add real auth if stronger user isolation is needed.
-- **File-based storage**: Images are stored on the local filesystem. For cloud deployment (e.g., Vercel), use object storage (S3, R2) instead.
-- **Generation speed**: Pollinations generation time depends on the selected model and current quota.
